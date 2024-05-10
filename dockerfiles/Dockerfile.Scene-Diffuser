@@ -1,0 +1,90 @@
+FROM pytorch/pytorch:1.13.1-cuda11.6-cudnn8-devel
+LABEL MAINTAINER Seiya Ito <seiyaito@ieee.org>
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt update \
+  && apt install -y \
+    git \
+    gcc \
+    libgl1-mesa-glx \
+    libgl1-mesa-dev \
+    libglu1-mesa \
+    libglu1-mesa-dev \
+    libosmesa6 \
+    libosmesa6-dev \
+    libx11-dev \
+    libxrandr-dev \
+    libxinerama-dev \
+    libxcursor-dev \
+    libxi-dev \
+    xvfb \
+    libegl1-mesa-dev \
+    libglib2.0-dev \
+  && apt-get clean \
+  && rm -rf /var/cache/apt/archives/* \
+  && rm -rf /var/lib/apt/lists/*
+
+RUN pip install mesh-to-sdf
+
+ENV PATH=/usr/local/cuda/bin:$PATH
+ARG TORCH_CUDA_ARCH_LIST="7.5+PTX"
+ARG FORCE_CUDA=1
+
+RUN pip install \
+  git+https://github.com/facebookresearch/pytorch3d.git@v0.7.0 \
+  git+https://github.com/otaheri/chamfer_distance.git@d2b524309db114d0f7ce18be6c01b3802cde9791 \
+  git+https://github.com/Silverster98/pointops \
+  git+https://github.com/nghorbani/human_body_prior \
+  urdf-parser-py==0.0.4 \
+  easydict \
+  einops==0.4.1 \
+  hydra-core==1.2.0 \
+  loguru==0.6.0 \
+  matplotlib==3.5.1 \
+  natsort==8.2.0 \
+  networkx==2.8.6 \
+  omegaconf==2.2.2 \
+  opencv-python==4.6.0.66 \
+  Pillow==9.0.1 \
+  plotly==5.11.0 \
+  plyfile \
+  protobuf==3.19.4 \
+  pyquaternion==0.9.9 \
+  pyrender==0.1.45 \
+  scikit-learn \
+  smplx==0.1.28 \
+  tabulate==0.8.10 \
+  tensorboard==2.8.0 \
+  tqdm==4.62.3 \
+  transforms3d==0.4.1 \
+  transformations==2022.9.26 \
+  trimesh==3.12.7 
+  
+ARG PYTORCH_KINEMATICS_COMMIT=472a48f4a5f14d611f53fab457e6e8b31f57445e
+RUN cd /tmp \
+  && git clone https://github.com/Silverster98/pytorch_kinematics \
+  && cd pytorch_kinematics \
+  && git checkout ${PYTORCH_KINEMATICS_COMMIT} \
+  && pip install -e .
+
+
+ENV DISPLAY=:99
+RUN Xvfb ${DISPLAY} -screen 0 1024x768x24 &> /tmp/xvfb.log &
+ 
+RUN pip install pyrender==0.1.45
+RUN pip install PyOpenGL==3.1.5
+RUN pip install open3d==0.16
+RUN pip install numpy==1.21.0
+
+ENV PYOPENGL_PLATFORM=osmesa
+
+ADD Scene-Diffuser.patch /tmp/Scene-Diffuser.patch
+ARG SCENEDIFFUSER_COMMIT=4a62ca30a4b37bb6d7b538e512905c570c4ded7c
+RUN cd / \
+  && git clone https://github.com/scenediffuser/Scene-Diffuser.git \
+  && cd Scene-Diffuser \
+  && git checkout ${SCENEDIFFUSER_COMMIT} \
+  && patch -p1 < /tmp/Scene-Diffuser.patch
+
+WORKDIR /workspace

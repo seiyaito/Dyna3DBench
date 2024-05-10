@@ -1,0 +1,125 @@
+diff --git a/App/TrainingDataGenerator/ScanNetMeshLoader.cpp b/App/TrainingDataGenerator/ScanNetMeshLoader.cpp
+index a127c79..3506e8b 100644
+--- a/App/TrainingDataGenerator/ScanNetMeshLoader.cpp
++++ b/App/TrainingDataGenerator/ScanNetMeshLoader.cpp
+@@ -46,6 +46,9 @@ std::shared_ptr<ScanNetMeshLoader::ScanNetMeshHolder> ScanNetMeshLoader::GetMesh
+ 
+     auto scanNetMeshHolder = std::make_shared<ScanNetMeshHolder>();
+     scanNetMeshHolder->name = tools::PathTool::getFileName(sequence);
++    if (!scanNetMeshHolder->name.empty() && scanNetMeshHolder->name[0] == '/') {
++        scanNetMeshHolder->name = scanNetMeshHolder->name.substr(1);
++    }
+     // load ply
+     SCLOG(VERBOSE)<< "Load cloud";
+ //    const std::string pth_ply = sequence+"/"+scanNetMeshHolder->name+"_vh_clean_2.labels_flip.ply";
+diff --git a/App/TrainingDataGenerator/exe_GroundtruthGenerator_ScanNetScan2CAD.cpp b/App/TrainingDataGenerator/exe_GroundtruthGenerator_ScanNetScan2CAD.cpp
+index ac81837..3b7f6b0 100644
+--- a/App/TrainingDataGenerator/exe_GroundtruthGenerator_ScanNetScan2CAD.cpp
++++ b/App/TrainingDataGenerator/exe_GroundtruthGenerator_ScanNetScan2CAD.cpp
+@@ -238,11 +238,11 @@ int main (int argc, char ** argv) {
+             const auto &objLabels = dataholder->objLabels;
+             const auto &objInstantces = dataholder->objInstances;
+ 
+-            if(scene_to_skip.find(subfolder) != scene_to_skip.end()){
+-                SCLOG(INFO) << "skip scene: " << subfolder;
+-                if(params.target_scene>=0)break;
+-                else continue;
+-            }
++            // if(scene_to_skip.find(subfolder) != scene_to_skip.end()){
++            //     SCLOG(INFO) << "skip scene: " << subfolder;
++            //     if(params.target_scene>=0)break;
++            //     else continue;
++            // }
+             SCLOG(DEBUG) << "subfolder: " << subfolder;
+ //            SCLOG(VERBOSE) << "subFolder: " << subfolder;
+             if (params.gui) {
+diff --git a/ConnectedComponent/CMakeLists.txt b/ConnectedComponent/CMakeLists.txt
+index 653899e..e7e43bd 100755
+--- a/ConnectedComponent/CMakeLists.txt
++++ b/ConnectedComponent/CMakeLists.txt
+@@ -18,6 +18,7 @@ target_link_libraries(${targetname}
+         PUBLIC ORUtils
+         PUBLIC CxxTools
+         )
++target_compile_options(${targetname} PUBLIC $<$<COMPILE_LANGUAGE:CXX>:-std=c++14>)
+ 
+ FIND_PACKAGE(GTest)
+ IF(GTEST_INCLUDE_DIR)
+diff --git a/ConnectedComponent/ConnectedComponent/CUDA/ConnectedComponent_CUDA.h b/ConnectedComponent/ConnectedComponent/CUDA/ConnectedComponent_CUDA.h
+index aeb7b03..9d1cb39 100755
+--- a/ConnectedComponent/ConnectedComponent/CUDA/ConnectedComponent_CUDA.h
++++ b/ConnectedComponent/ConnectedComponent/CUDA/ConnectedComponent_CUDA.h
+@@ -1,10 +1,10 @@
+ #pragma once
+ 
+-#include "../../../ORUtils/MemoryBlock.h"
++#include "../../../ORUtils/include/ORUtils/MemoryBlock.h"
+ #include "../Interface/ConnectedComponent.h"
+ #include "../Shared/ConnectedComponent_shared.h"
+ #include <map>
+-#include "../../../ORUtils/Image.h"
++#include "../../../ORUtils/include/ORUtils/Image.h"
+ 
+ namespace SCFUSION{
+     class ConnectedComponent_CUDA : public ConnectedComponent {
+@@ -202,4 +202,4 @@ namespace SCFUSION{
+             return djset->getRootNum();
+         }
+     };
+-}
+\ No newline at end of file
++}
+diff --git a/ConnectedComponent/exe_cc.cpp b/ConnectedComponent/exe_cc.cpp
+index f7252fc..a0f40bb 100755
+--- a/ConnectedComponent/exe_cc.cpp
++++ b/ConnectedComponent/exe_cc.cpp
+@@ -9,8 +9,8 @@
+ #include <vector>
+ #include <gtest/gtest.h>
+ #include <random>
+-#include "../ORUtils/Image.h"
+-#include "../ORUtils/LogUtil.h"
++#include "../ORUtils/include/ORUtils/Image.h"
++#include "../ORUtils/include/ORUtils/LogUtil.h"
+ 
+ #ifdef WITH_OPENCV
+ #include <opencv2/core.hpp>
+diff --git a/scripts/GenerateTrainingData_ScanNetScan2CAD_skip200.py b/scripts/GenerateTrainingData_ScanNetScan2CAD_skip200.py
+index 305b55d..a3c6157 100644
+--- a/scripts/GenerateTrainingData_ScanNetScan2CAD_skip200.py
++++ b/scripts/GenerateTrainingData_ScanNetScan2CAD_skip200.py
+@@ -2,8 +2,8 @@ import subprocess, os, sys, time
+ import multiprocessing as mp
+ import copy
+ debug=0
+-exe='../cmake-build-release/App/TrainingDataGenerator/exe_TrainingDataGenerator_ScanNetScan2CAD'
+-config='../Configurations/Config_ScanNet.txt'
++exe='/SCFusion/build/App/TrainingDataGenerator/exe_TrainingDataGenerator_ScanNetScan2CAD'
++config='/SCFusion/Configurations/Config_ScanNet.txt'
+ ITSDF=0
+ fromGT=1
+ threshold_o=0.98
+@@ -27,16 +27,15 @@ sampleNum=100
+ skipFrame = 200
+ renderFilterThreshold=-1
+ 
+-pth_ply='/media/sc/space1/dataset/scannet/scans'
+-pth_scan='/media/sc/SSD1TB/scannet_poses'
+-pth_shapenet='/media/sc/space1/dataset/ShapeNetCore.v2/'
+-pth_annotations='/media/sc/space1/dataset/Scan2CAD/Routines/Script/full_annotations.json'
++pth_ply='/datasets/ScanNet/scans'
++pth_scan='/workspace/datasets/CompleteScanNet/aligned_poses'
++pth_shapenet='/datasets/ShapeNetCore.v2/'
++pth_annotations='/workspace/Scan2CAD/Routines/Script/full_annotations.json'
+ 
+-baseFolder = '/media/sc/BackupDesk/TrainingDataScanNet_0614/047_200/'
+-baseFolder = '/media/sc/BackupDesk/tmp/'
++baseFolder = '/workspace/datasets/CompleteScanNet/TrainingData_200/'
+ 
+-train_file='/media/sc/space1/dataset/scannet/Tasks/Benchmark/scannetv2_train.txt'
+-test_file='/media/sc/space1/dataset/scannet/Tasks/Benchmark/scannetv2_val.txt'
++train_file='/workspace/ScanNet/Tasks/Benchmark/scannetv2_train.txt'
++test_file='/workspace/ScanNet/Tasks/Benchmark/scannetv2_val.txt'
+ 
+ 
+ #################################################

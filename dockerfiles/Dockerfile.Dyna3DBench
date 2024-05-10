@@ -1,0 +1,41 @@
+FROM continuumio/miniconda3
+LABEL MAINTAINER Seiya Ito <seiyaito@ieee.org>
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt update | true \
+  && apt install -y \
+    git \
+    gcc \
+    libgl1-mesa-glx \
+    libgl1-mesa-dev \
+    libglu1-mesa \
+    libglu1-mesa-dev \
+    libosmesa6 \
+    libosmesa6-dev \
+    libx11-dev \
+    libxrandr-dev \
+    libxinerama-dev \
+    libxcursor-dev \
+    libxi-dev \
+    xvfb \
+    libegl1-mesa-dev \
+    libglib2.0-dev \
+  && apt-get clean \
+  && rm -rf /var/cache/apt/archives/* \
+  && rm -rf /var/lib/apt/lists/*
+
+COPY environment.yml .
+RUN conda env create -f environment.yml 
+
+RUN echo "source activate dyna3dbench" > ~/.bashrc
+
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+WORKDIR /workspace
+
+ENTRYPOINT ["/entrypoint.sh"]
+CMD ["/bin/bash"]
+
+

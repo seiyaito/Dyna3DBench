@@ -1,0 +1,54 @@
+services:
+  dyna3dbench:
+    image: dyna3dbench
+    build: 
+      context: dockerfiles
+      dockerfile: Dockerfile.Dyna3DBench
+    container_name: dyna3dbench
+    shm_size: '16gb'
+    tty: true
+    volumes:
+      - "/tmp/.X11-unix:/tmp/.X11-unix"
+      - .:/workspace
+      - ${SCANNETV2}:/datasets/ScanNet:ro
+      - ${SHAPENETCOREV2}:/datasets/ShapeNetCore.v2:ro
+      - ${SCAN2CAD}:/datasets/scan2cad:ro
+      - ${COMPLETESCANNET}:/datasets/CompleteScanNet:ro
+      - ${DYNA3DBENCH}:/datasets/Dyna3DBench
+    env_file:
+      - .env
+  scenediffuser:
+    image: scenediffuser
+    build:
+      context: dockerfiles
+      dockerfile: Dockerfile.Scene-Diffuser
+    container_name: scenediffuser
+    shm_size: '16gb'
+    tty: true
+    volumes:
+      - "/tmp/.X11-unix:/tmp/.X11-unix"
+      - .:/workspace
+      - ./data:/data
+      - ${SCANNETV2}:/datasets/ScanNet:ro
+      - ${DYNA3DBENCH}:/datasets/Dyna3DBench
+    env_file:
+      - .env
+  scfusion:
+    image: scfusion
+    build: 
+      context: dockerfiles
+      dockerfile: Dockerfile.SCFusion
+    container_name: scfusion
+    shm_size: '16gb'
+    tty: true
+    volumes:
+      - "/tmp/.X11-unix:/tmp/.X11-unix"
+      - .:/workspace
+      - ${SCANNETV2}:/datasets/ScanNet:ro
+      - ${SHAPENETCOREV2}:/datasets/ShapeNetCore.v2:ro
+      - ${SCAN2CAD}:/datasets/scan2cad:ro
+      - ${COMPLETESCANNET}:/datasets/CompleteScanNet:ro
+      - ${DYNA3DBENCH}:/datasets/Dyna3DBench:ro
+    env_file:
+      - .env
+

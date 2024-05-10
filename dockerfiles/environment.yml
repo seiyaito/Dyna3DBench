@@ -1,0 +1,13 @@
+name: dyna3dbench
+channels:
+  - conda-forge
+dependencies:
+  - python=3.10
+  - pip:
+    - numpy==1.23.0
+    - open3d==0.16
+    - tqdm
+    - joblib
+    - opencv-python
+    - imageio
+    - pypng

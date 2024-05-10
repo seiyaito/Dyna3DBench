@@ -1,0 +1,129 @@
+FROM seiyaito/ubuntu18.04-cuda-torch
+LABEL MAINTAINER Seiya Ito <seiyaito@ieee.org>
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt update | true \
+  && apt install -y \
+    git \
+    gcc \
+    libgl1-mesa-glx \
+    libgl1-mesa-dev \
+    libglu1-mesa \
+    libglu1-mesa-dev \
+    libosmesa6 \
+    libosmesa6-dev \
+    libx11-dev \
+    libxrandr-dev \
+    libxinerama-dev \
+    libxcursor-dev \
+    libxi-dev \
+    xvfb \
+    libegl1-mesa-dev \
+    libglib2.0-dev \
+  && apt-get clean \
+  && rm -rf /var/cache/apt/archives/* \
+  && rm -rf /var/lib/apt/lists/*
+
+ENV PATH=/usr/local/cuda/bin:$PATH
+ARG TORCH_CUDA_ARCH_LIST="7.5+PTX"
+ARG CUDA_ARCHITECTURES=75
+ARG FORCE_CUDA=1
+
+ENV DISPLAY=:99
+RUN Xvfb ${DISPLAY} -screen 0 1024x768x24 &> /tmp/xvfb.log &
+
+RUN apt update | true \
+  && apt install -y \
+    wget \
+    unzip \
+    libpcl-dev \
+    libbrotli-dev \
+    libopencv-dev \
+    libassimp-dev \
+    assimp-utils \
+    libglfw3 \
+    libglfw3-dev \
+    libgtest-dev \
+    libusb-dev \
+  && apt-get clean \
+  && rm -rf /var/cache/apt/archives/* \
+  && rm -rf /var/lib/apt/lists/*
+
+ARG CMAKE_VERSION=3.18
+ARG CMAKE_REVISION=4
+RUN cd /tmp \
+  && wget https://cmake.org/files/v${CMAKE_VERSION}/cmake-${CMAKE_VERSION}.${CMAKE_REVISION}-Linux-x86_64.sh \
+  && bash ./cmake-${CMAKE_VERSION}.${CMAKE_REVISION}-Linux-x86_64.sh \
+    --skip-license \
+    --prefix=/usr/local \
+  && cd /tmp \
+  && rm ./cmake-${CMAKE_VERSION}.${CMAKE_REVISION}-Linux-x86_64.sh
+
+ARG NUM_THREADS=4
+
+ARG EIGEN3_COMMIT=36b95962756c1fce8e29b1f8bc45967f30773c00
+RUN cd /tmp \
+  && git clone https://github.com/eigenteam/eigen-git-mirror.git \
+  && cd eigen-git-mirror \
+  && git checkout ${EIGEN3_COMMIT} \
+  && mkdir build \
+  && cd build \
+  && cmake .. \
+  && make install \
+  && cd /tmp \
+  && rm -rf eigen-git-mirror 
+
+ARG GOOGLETEST_COMMIT=dea0216d0c6bc5e63cf5f6c8651cd268668032ec
+RUN cd /tmp \
+  && git clone https://github.com/google/googletest.git \
+  && cd googletest \
+  && git checkout ${GOOGLETEST_COMMIT} \
+  && mkdir build \
+  && cd build \
+  && cmake .. \
+  && make \
+  && make install \
+  && cd /tmp \
+  && rm -rf googletest
+
+ARG TOON_COMMIT=370dcd95421a2c1b15788351cf5e57b489d36aa1
+RUN cd /tmp \
+  && git clone https://github.com/edrosten/TooN.git \
+  && cd TooN \
+  && git checkout ${TOON_COMMIT} \
+  && ./configure \
+  && make \
+  && make install \
+  && cd /tmp \
+  && rm -rf TooN
+  
+RUN cmake --version
+RUN /usr/local/bin/cmake --version
+ARG SCFUSION_COMMIT=0a97649b5f41867446d5e2b1978e3ba2bb03f114
+ADD SCFusion.patch /tmp/SCFusion.patch
+RUN git clone https://github.com/ShunChengWu/SCFusion /SCFusion \
+  && cd /SCFusion \
+  && git checkout ${SCFUSION_COMMIT} \
+  && git config --file .gitmodules --get-regexp 'submodule\..*\.url' \
+  | while read key value; do https_url=$(echo "$value" | sed -e 's|git@github.com:|https://github.com/|'); git config --file .gitmodules "$key" "$https_url"; done \
+  && git submodule update --init \
+  && patch -p1 < /tmp/SCFusion.patch \  
+  && mkdir build \
+  && cd build \
+  && /usr/local/bin/cmake \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DWITH_PYTORCH=ON \
+    -DPYTORCH_PATH=/libtorch \
+    -DCMAKE_PREFIX_PATH=/libtorch/share/cmake/Torch \
+    -DWITH_GUI=ON \
+    -DBUILD_DATA_GENERATOR=ON \
+    -DCUDA_COMPUTE_CAPABILITY=${CUDA_ARCHITECTURES} \
+    .. \
+  && cd .. \
+  && make -C build -j${NUM_THREADS} \
+  && mkdir -p /SCFusion/Models \
+  && cd /SCFusion/Models \
+  && wget "https://www.campar.in.tum.de/public_datasets/2020_3dv_wusc/SI_ScanNet_0614.pt"
+
+WORKDIR /workspace
