@@ -1,6 +1,6 @@
 # A Benchmark for 3D Reconstruction with Semantic Completion in Dynamic Environments
 
-This is an official implementation of "[A Benchmark for 3D Reconstruction with Semantic Completion in Dynamic Environments](#)" presented in [IW-FCV2024](https://sites.google.com/view/iw-fcv2024/home).
+This is an official implementation of "[A Benchmark for 3D Reconstruction with Semantic Completion in Dynamic Environments](https://doi.org/10.1007/978-981-97-4249-3_7)" presented in [IW-FCV2024](https://sites.google.com/view/iw-fcv2024/home).
 
 ## Setting up the environment
 We recommend using [Docker Compose](https://docs.docker.com/compose/) to set up the environment for this repository. Follow the steps below to get started.
@@ -88,7 +88,7 @@ docker compose run --rm dyna3dbench scripts/run_synthesis.sh
 This repository provides a script to apply SCFusion [Wu+, 3DV2020] to a dataset. Please check [scripts/run_scfusion.sh](scripts/run_scfusion.sh) for details.
 
 ```
-docker compose run --rm scfusion scripts/run_scfusion_.sh \
+docker compose run --rm scfusion scripts/run_scfusion.sh \
   -d ${DYNA3DBENCH}/sens/0 \
   -o outputs/Dyna3DBench/0
 ```
@@ -102,6 +102,7 @@ If you use our code or dataset in your work, please cite our paper:
   author    = {Qinyuan Zhou and Seiya Ito and Kazuhiko Sumi},
   title     = {A Benchmark for 3D Reconstruction with Semantic Completion in Dynamic Environments},
   booktitle = {The 30th International Workshop on Frontiers of Computer Vision (IW-FCV)},
+  pages     = {81–92},
   year      = {2024},
 }
 ```
